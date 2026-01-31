@@ -120,6 +120,8 @@ class MemoryManager:
                 )
             except Exception as e:
                 print(f"Error saving to Mongo: {e}")
+                # Critical: Propagate error so API knows registration failed
+                raise e
         else:
             with open(self.profile_file, 'w') as f:
                 json.dump(profile_data, f, indent=4)
