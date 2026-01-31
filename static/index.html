@@ -508,9 +508,10 @@
                     body: JSON.stringify({ user_id: currentUser, message: text }) // No history needed now
                 });
                 const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Server Check Failed');
                 if (data.response) addMessage(data.response, 'bot');
             } catch (e) {
-                addMessage("Server seems dead. Check backend.", 'bot');
+                addMessage(`Server Error: ${e.message}`, 'bot');
             }
         }
 
