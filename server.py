@@ -66,6 +66,10 @@ def home():
     # Serve the HTML frontend
     return FileResponse('static/index.html')
 
+@app.get("/version")
+def version():
+    return {"version": "v6.0", "fix": "SHA256-PRE-HASH", "status": "deployed"}
+
 @app.get("/health")
 def health():
     return {"status": "healthy"}
@@ -144,4 +148,5 @@ def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
+    print("STARTUP: Loading v6.0 (SHA256 Fix)")
     uvicorn.run(app, host="0.0.0.0", port=8000)
