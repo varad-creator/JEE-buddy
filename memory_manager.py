@@ -13,7 +13,7 @@ load_dotenv()
 load_dotenv()
 
 class MemoryManager:
-    def __init__(self, user_id='default_user'):
+    def __init__(self, user_id='default_user', fail_safe=False):
         self.user_id = user_id
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
@@ -211,11 +211,21 @@ class MemoryManager:
 
     def check_db_status(self):
         """Returns connection info for debugging."""
+        masked_uri = "None"
+        if self.mongo_uri:
+            # Hide password
+            try:
+                part1 = self.mongo_uri.split("@")[1]
+                masked_uri = "..." + part1
+            except:
+                masked_uri = "Invalid/Unparseable"
+
         status = {
             "use_mongo": self.use_mongo,
             "has_client": self.mongo_client is not None,
             "strategies_tried": "Secure, Insecure",
-            "init_error": self.init_error
+            "init_error": self.init_error,
+            "masked_uri_check": masked_uri
         }
         if self.mongo_client:
             try:
