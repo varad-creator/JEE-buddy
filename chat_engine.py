@@ -3,7 +3,8 @@ import datetime
 from dotenv import load_dotenv
 from openai import OpenAI
 from memory_manager import MemoryManager
-from knowledge_base import JEEKnowledgeBase
+from memory_manager import MemoryManager
+# from knowledge_base import JEEKnowledgeBase (Moved to lazy import)
 
 # Load environment variables
 load_dotenv()
@@ -72,10 +73,12 @@ class JEEBuddyEngine:
         
         print("Initializing Knowledge Base...")
         try:
+            # Lazy import to prevent serverless crash on module load
+            from knowledge_base import JEEKnowledgeBase
             self.kb = JEEKnowledgeBase()
-        except Exception:
+        except Exception as e:
             self.kb = None
-            print("Warning: Knowledge Base failed to initialize.")
+            print(f"Warning: RAG System Disabled. Error: {e}")
 
     def get_time_context(self):
         now = datetime.datetime.now()

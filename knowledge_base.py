@@ -9,27 +9,36 @@ class JEEKnowledgeBase:
         Initialize the ChromaDB client and embedding function.
         """
         print("Initializing Knowledge Base...")
-        
-        # Vercel Check: Use /tmp if root is likely read-only
-        if os.path.exists("/tmp"):
-            db_path = "/tmp/jee_chroma_db"
-            print(f"Running in Serverless mode. Using ephemeral path: {db_path}")
+        self.client = None
+        self.collection = None
+        self.embedding_fn = None
 
-        # 1. Initialize ChromaDB PersistentClient
-        self.client = chromadb.PersistentClient(path=db_path)
-        
-        # 2. Initialize Embedding Function (running locally)
-        # Using 'all-MiniLM-L6-v2' as requested for cost-saving local embeddings
-        self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name="all-MiniLM-L6-v2"
-        )
-        
-        # 3. Get or Create Collection
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            embedding_function=self.embedding_fn
-        )
-        print(f"Knowledge Base initialized with collection: {collection_name}")
+        try:
+            # Vercel Check: Use /tmp if root is likely read-only
+            if os.path.exists("/tmp"):
+                db_path = "/tmp/jee_chroma_db"
+                print(f"Running in Serverless mode. Using ephemeral path: {db_path}")
+
+            # 1. Initialize ChromaDB PersistentClient
+            # Note: This often fails on serverless due to sqlite/size limits
+            self.client = chromadb.PersistentClient(path=db_path)
+            
+            # 2. Initialize Embedding Function (running locally)
+            self.embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name="all-MiniLM-L6-v2"
+            )
+            
+            # 3. Get or Create Collection
+            self.collection = self.client.get_or_create_collection(
+                name=collection_name,
+                embedding_function=self.embedding_fn
+            )
+            print(f"Knowledge Base initialized with collection: {collection_name}")
+            
+        except Exception as e:
+            print(f"CRITICAL: Knowledge Base Failed to Load (Likely Vercel Limit). RAG Disabled. Error: {e}")
+            self.client = None
+            self.collection = None
 
     def ingest_csv(self, file_path):
         """
@@ -114,6 +123,10 @@ class JEEKnowledgeBase:
         """
         Semantic search on the collection.
         """
+        if self.collection is None:
+             print("Knowledge Base is offline. Return empty search.")
+             return {'documents': [[]], 'metadatas': [[]], 'distances': [[]]}
+
         print(f"Searching for: '{query}'")
         results = self.collection.query(
             query_texts=[query],
