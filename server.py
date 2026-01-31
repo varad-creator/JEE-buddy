@@ -78,6 +78,7 @@ def debug_db():
 
 @app.post("/register")
 def register(user: UserRegister):
+    user.email = user.email.lower().strip() # Normalize
     try:
         mm = MemoryManager(user_id=user.email) # Use email as ID for simplicity
         profile = mm.get_profile_dict() # Need to access raw dict
@@ -100,10 +101,22 @@ def register(user: UserRegister):
 
 @app.post("/login")
 def login(user: UserAuth):
+    user.email = user.email.lower().strip() # Normalize
     mm = MemoryManager(user_id=user.email)
+    
+    # Check connection health first
+    if mm.init_error or not mm.use_mongo:
+         raise HTTPException(status_code=500, detail=f"Database Offline: {mm.init_error}")
+
     profile = mm.get_profile_dict()
     
+    # DEBUG LOG
+    print(f"LOGIN ATTEMPT: {user.email}")
+    print(f"PROFILE FOUND: {profile}")
+    
     if not profile.get("password_hash"):
+        print("LOGIN FAIL: No password hash found in profile.")
+        # This implies user doesn't exist OR db read failed silently (returning default)
         raise HTTPException(status_code=404, detail="User not found")
     
     if not verify_password(user.password, profile["password_hash"]):
