@@ -9,6 +9,12 @@ class JEEKnowledgeBase:
         Initialize the ChromaDB client and embedding function.
         """
         print("Initializing Knowledge Base...")
+        
+        # Vercel Check: Use /tmp if root is likely read-only
+        if os.path.exists("/tmp"):
+            db_path = "/tmp/jee_chroma_db"
+            print(f"Running in Serverless mode. Using ephemeral path: {db_path}")
+
         # 1. Initialize ChromaDB PersistentClient
         self.client = chromadb.PersistentClient(path=db_path)
         

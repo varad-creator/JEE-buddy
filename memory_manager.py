@@ -34,7 +34,12 @@ class MemoryManager:
         
         if not self.use_mongo:
             # File system fallback
-            self.profiles_dir = 'profiles'
+            # On Vercel (Linux), only /tmp is writable
+            if os.path.exists("/tmp"):
+                self.profiles_dir = "/tmp/profiles"
+            else:
+                self.profiles_dir = 'profiles'
+                
             if not os.path.exists(self.profiles_dir):
                 os.makedirs(self.profiles_dir)
             self.profile_file = os.path.join(self.profiles_dir, f'{self.user_id}.json')

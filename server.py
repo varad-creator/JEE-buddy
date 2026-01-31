@@ -18,8 +18,6 @@ engine = JEEBuddyEngine()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Mount Static Files
-if not os.path.exists("static"):
-    os.makedirs("static")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # --- Data Models ---
