@@ -24,7 +24,11 @@ class MemoryManager:
             try:
                 # simple check if uri looks valid
                 if "mongodb" in self.mongo_uri:
-                    self.mongo_client = pymongo.MongoClient(self.mongo_uri, tlsCAFile=certifi.where())
+                    self.mongo_client = pymongo.MongoClient(
+                        self.mongo_uri, 
+                        tlsCAFile=certifi.where(),
+                        serverSelectionTimeoutMS=5000 # 5s timeout to prevent Vercel hang
+                    )
                     self.db = self.mongo_client["jeebuddy_db"]
                     self.collection = self.db["user_profiles"]
                     self.use_mongo = True
