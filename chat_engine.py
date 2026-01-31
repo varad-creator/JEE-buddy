@@ -67,9 +67,10 @@ class JEEBuddyEngine:
     def __init__(self):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
-            raise ValueError("OPENAI_API_KEY not found in env.")
-        
-        self.client = OpenAI(api_key=self.api_key)
+            print("CRITICAL WARNING: OPENAI_API_KEY not found in env. Chat will fail.")
+            self.client = None
+        else:
+            self.client = OpenAI(api_key=self.api_key)
         
         print("Initializing Knowledge Base...")
         try:
@@ -143,6 +144,9 @@ class JEEBuddyEngine:
 
         # 6. Call OpenAI
         try:
+            if not self.client:
+                return "Error: Server Misconfigured. OPENAI_API_KEY missing in Vercel Settings."
+
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
