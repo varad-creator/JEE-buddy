@@ -418,6 +418,7 @@
         const regError = document.getElementById('reg-error');
 
         let currentUser = null;
+        let typingElement = null;
 
         // --- Auth Logic ---
         function showRegister() {
@@ -527,95 +528,86 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        sendBtn.onclick = sendMessage;
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
+        function showTyping() {
+            if (typingElement) return;
+            typingElement = document.createElement('div');
+            typingElement.className = 'typing-indicator';
+            typingElement.innerHTML = '<span></span><span></span><span></span>';
+            chatContainer.appendChild(typingElement);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function removeTyping() {
+            if (typingElement) {
+                typingElement.remove();
+                typingElement = null;
+            }
+        }
 
         async function sendMessage() {
             const text = messageInput.value.trim();
             if (!text) return;
 
+            // 1. Disable Input
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+
             addMessage(text, 'user');
             messageInput.value = '';
 
-            let typingElement = null;
+            // 2. Show Typing
+            showTyping();
 
-            function showTyping() {
-                if (typingElement) return;
-                typingElement = document.createElement('div');
-                typingElement.className = 'typing-indicator';
-                typingElement.innerHTML = '<span></span><span></span><span></span>';
-                chatContainer.appendChild(typingElement);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUser, message: text })
+                });
+                const data = await res.json();
+
+                // 3. Remove typing BEFORE showing message
+                removeTyping();
+
+                if (!res.ok) throw new Error(data.detail || 'Server Check Failed');
+                if (data.response) addMessage(data.response, 'bot');
+            } catch (e) {
+                removeTyping();
+                addMessage(`Server Error: ${e.message}`, 'bot');
+            } finally {
+                // 4. Re-enable Input
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.focus();
             }
+        }
 
-            function removeTyping() {
-                if (typingElement) {
-                    typingElement.remove();
-                    typingElement = null;
-                }
-            }
+        sendBtn.onclick = sendMessage;
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
 
-            async function sendMessage() {
-                const text = messageInput.value.trim();
-                if (!text) return;
+        // --- Profile Logic ---
+        window.openProfile = async () => {
+            profileModal.style.display = 'flex';
+            const res = await fetch(`/profile/${currentUser}`);
+            const p = await res.json();
 
-                // 1. Disable Input
-                messageInput.disabled = true;
-                sendBtn.disabled = true;
-
-                addMessage(text, 'user');
-                messageInput.value = '';
-
-                // 2. Show Typing
-                showTyping();
-
-                try {
-                    const res = await fetch('/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: currentUser, message: text })
-                    });
-                    const data = await res.json();
-
-                    // 3. Remove typing BEFORE showing message
-                    removeTyping();
-
-                    if (!res.ok) throw new Error(data.detail || 'Server Check Failed');
-                    if (data.response) addMessage(data.response, 'bot');
-                } catch (e) {
-                    removeTyping();
-                    addMessage(`Server Error: ${e.message}`, 'bot');
-                } finally {
-                    // 4. Re-enable Input
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
-                    messageInput.focus();
-                }
-            }
-
-            // --- Profile Logic ---
-            window.openProfile = async () => {
-                profileModal.style.display = 'flex';
-                const res = await fetch(`/profile/${currentUser}`);
-                const p = await res.json();
-
-                const stats = document.getElementById('profile-stats');
-                stats.innerHTML = `
+            const stats = document.getElementById('profile-stats');
+            stats.innerHTML = `
             <div class="stat-item"><div class="stat-label">Name</div><div class="stat-value">${p.name || 'Unknown'}</div></div>
             <div class="stat-item"><div class="stat-label">Strong At</div><div class="stat-value">${p.strong_subjects.join(', ') || '-'}</div></div>
             <div class="stat-item"><div class="stat-label">Weak At</div><div class="stat-value" style="color:#ff5252">${p.weak_subjects.join(', ') || '-'}</div></div>
             <div class="stat-item"><div class="stat-label">Coaching</div><div class="stat-value">${p.coaching_name || '-'}</div></div>
             <div class="stat-item"><div class="stat-label">Stress</div><div class="stat-value">${p.stress_level}</div></div>
         `;
-            };
+        };
 
-            window.closeProfile = () => profileModal.style.display = 'none';
+        window.closeProfile = () => profileModal.style.display = 'none';
 
-            window.logout = () => {
-                location.reload(); // Simple logout
-            };
+        window.logout = () => {
+            location.reload(); // Simple logout
+        };
     </script>
 
 </body>
