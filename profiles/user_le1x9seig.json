@@ -1,0 +1,13 @@
+{
+    "name": "User",
+    "weak_subjects": [],
+    "strong_subjects": [
+        "organic chemistry"
+    ],
+    "exam_year": null,
+    "stress_level": "medium",
+    "coaching_name": null,
+    "coaching_timing": null,
+    "upcoming_tests": [],
+    "daily_routine": null
+}

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEE Buddy</title>
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --chat-bg: #161616;
+            --user-msg-bg: #006C4C;
+            /* Darker Green */
+            --bot-msg-bg: #262626;
+            --text-color: #eaeaea;
+            --accent-color: #00BFA5;
+            --accent-hover: #009688;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Login Screen --- */
+        #auth-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .auth-box {
+            background: #222;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .auth-box h1 {
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            color: #888;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #333;
+            background: #333;
+            color: white;
+            outline: none;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-color);
+            color: black;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .auth-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .switch-link {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #888;
+            cursor: pointer;
+        }
+
+        .switch-link:hover {
+            color: var(--accent-color);
+        }
+
+        /* --- Chat Screen --- */
+        #app-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        header {
+            background-color: var(--chat-bg);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .header-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brain-btn {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .brain-btn:hover {
+            background: rgba(0, 191, 165, 0.1);
+        }
+
+        #chat-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #0f0f0f;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.5;
+            position: relative;
+            font-size: 0.95rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-msg-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            background-color: var(--bot-msg-bg);
+            color: var(--text-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .timestamp {
+            font-size: 0.65em;
+            opacity: 0.6;
+            margin-top: 4px;
+            display: block;
+            text-align: right;
+        }
+
+        #input-area {
+            background-color: var(--chat-bg);
+            padding: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #message-input {
+            flex: 1;
+            padding: 14px;
+            border-radius: 25px;
+            border: none;
+            background-color: #2c2c2c;
+            color: white;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        #send-btn {
+            background-color: var(--accent-color);
+            color: black;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* --- Modal (Profile) --- */
+        #profile-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .stat-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            margin-top: 4px;
+        }
+
+        .typing-indicator span {
+            background-color: var(--accent-color);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Login / Register Screen -->
+    <div id="auth-screen">
+        <!-- LOGIN BOX -->
+        <div class="auth-box" id="login-box">
+            <h1>Welcome Back 👋</h1>
+            <div class="input-group">
+                <label>Email ID</label>
+                <input type="email" id="login-email" placeholder="student@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="••••••••">
+            </div>
+            <button class="auth-btn" onclick="handleLogin()">Log In</button>
+            <div class="switch-link" onclick="showRegister()">New here? Create Account</div>
+            <p class="auth-error" id="login-error" style="color: #ff5252; font-size: 0.8rem; margin-top: 10px;"></p>
+        </div>
+
+        <!-- REGISTER BOX (Hidden by default) -->
+        <div class="auth-box" id="register-box" style="display: none;">
+            <h1>Create Account 🚀</h1>
+            <div class="input-group">
+                <label>Full Name</label>
+                <input type="text" id="reg-name" placeholder="Varun">
+            </div>
+            <div class="input-group">
+                <label>Email ID</label>
+                <input type="email" id="reg-email" placeholder="student@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="reg-password" placeholder="Set a strong password">
+            </div>
+            <button class="auth-btn" onclick="handleRegister()">Sign Up</button>
+            <div class="switch-link" onclick="showLogin()">Already have an account? Log In</div>
+            <p class="auth-error" id="reg-error" style="color: #ff5252; font-size: 0.8rem; margin-top: 10px;"></p>
+        </div>
+    </div>
+
+    <!-- Main App Screen -->
+    <div id="app-screen">
+        <header>
+            <div class="header-title">
+                <span>🤖</span> JEE Buddy
+            </div>
+            <button class="brain-btn" onclick="openProfile()">🧠 My Brain</button>
+        </header>
+
+        <div id="chat-container"></div>
+
+        <div id="input-area">
+            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+            <button id="send-btn">➤</button>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeProfile()">&times;</span>
+            <h2>What I Know About You</h2>
+            <div id="profile-stats">
+                <!-- Populated by JS -->
+            </div>
+            <button class="auth-btn" onclick="logout()" style="background: #ef5350; margin-top:20px;">Log Out</button>
+        </div>
+    </div>
+
+    <script>
+        const authScreen = document.getElementById('auth-screen');
+        const appScreen = document.getElementById('app-screen');
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const profileModal = document.getElementById('profile-modal');
+
+        // Auth Elems
+        const loginBox = document.getElementById('login-box');
+        const registerBox = document.getElementById('register-box');
+        const loginError = document.getElementById('login-error');
+        const regError = document.getElementById('reg-error');
+
+        let currentUser = null;
+
+        // --- Auth Logic ---
+        function showRegister() {
+            loginBox.style.display = 'none';
+            registerBox.style.display = 'block';
+            loginError.innerText = '';
+            regError.innerText = '';
+        }
+
+        function showLogin() {
+            registerBox.style.display = 'none';
+            loginBox.style.display = 'block';
+            loginError.innerText = '';
+            regError.innerText = '';
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            loginError.innerText = "Checking...";
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentUser = data.user_id;
+                    authScreen.style.display = 'none';
+                    appScreen.style.display = 'flex';
+                    loadHistory();
+                } else {
+                    loginError.innerText = data.detail;
+                }
+            } catch (e) {
+                loginError.innerText = "Server Error";
+            }
+        }
+
+        async function handleRegister() {
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+
+            if (!name || !email || !password) {
+                regError.innerText = "Please fill all fields";
+                return;
+            }
+
+            regError.innerText = "Creating Account...";
+
+            try {
+                const res = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Auto login after register
+                    currentUser = data.user_id;
+                    authScreen.style.display = 'none';
+                    appScreen.style.display = 'flex';
+                    loadHistory();
+                } else {
+                    regError.innerText = data.detail;
+                }
+            } catch (e) {
+                regError.innerText = "Server Error";
+            }
+        }
+        // --- Chat Logic ---
+        async function loadHistory() {
+            chatContainer.innerHTML = ''; // prevent duplicates
+            try {
+                const res = await fetch(`/history/${currentUser}`);
+                const data = await res.json();
+                data.history.forEach(msg => {
+                    const role = msg.role === 'user' ? 'user' : 'bot';
+                    addMessage(msg.content, role, false); // false = no animation delay
+                });
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            } catch (e) { console.error(e); }
+        }
+
+        function addMessage(text, sender, animate = true) {
+            // Handle double text splits for visual only
+            if (sender === 'bot' && text.includes('\nJEE Buddy:')) {
+                const parts = text.split(/\nJEE Buddy:\s*/i);
+                addMessage(parts[0], 'bot', animate);
+                setTimeout(() => addMessage(parts[1], 'bot', animate), animate ? 800 : 0);
+                return;
+            }
+
+            const div = document.createElement('div');
+            div.classList.add('message');
+            div.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+            div.innerHTML = text.replace(/\n/g, '<br>') +
+                `<span class="timestamp">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        sendBtn.onclick = sendMessage;
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            addMessage(text, 'user');
+            messageInput.value = '';
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUser, message: text }) // No history needed now
+                });
+                const data = await res.json();
+                if (data.response) addMessage(data.response, 'bot');
+            } catch (e) {
+                addMessage("Server seems dead. Check backend.", 'bot');
+            }
+        }
+
+        // --- Profile Logic ---
+        window.openProfile = async () => {
+            profileModal.style.display = 'flex';
+            const res = await fetch(`/profile/${currentUser}`);
+            const p = await res.json();
+
+            const stats = document.getElementById('profile-stats');
+            stats.innerHTML = `
+            <div class="stat-item"><div class="stat-label">Name</div><div class="stat-value">${p.name || 'Unknown'}</div></div>
+            <div class="stat-item"><div class="stat-label">Strong At</div><div class="stat-value">${p.strong_subjects.join(', ') || '-'}</div></div>
+            <div class="stat-item"><div class="stat-label">Weak At</div><div class="stat-value" style="color:#ff5252">${p.weak_subjects.join(', ') || '-'}</div></div>
+            <div class="stat-item"><div class="stat-label">Coaching</div><div class="stat-value">${p.coaching_name || '-'}</div></div>
+            <div class="stat-item"><div class="stat-label">Stress</div><div class="stat-value">${p.stress_level}</div></div>
+        `;
+        };
+
+        window.closeProfile = () => profileModal.style.display = 'none';
+
+        window.logout = () => {
+            location.reload(); // Simple logout
+        };
+    </script>
+
+</body>
+
+</html>

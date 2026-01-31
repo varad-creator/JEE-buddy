@@ -1,0 +1,5 @@
+.env
+__pycache__/
+*.pyc
+profiles/
+jee_chroma_db/
