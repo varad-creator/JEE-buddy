@@ -289,8 +289,46 @@
             margin-top: 4px;
         }
 
+        .typing-indicator {
+            background-color: var(--bot-msg-bg);
+            padding: 15px;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            display: inline-block;
+            align-self: flex-start;
+            margin-bottom: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+
         .typing-indicator span {
-            background-color: var(--accent-color);
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #888;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+            margin: 0 2px;
+        }
+
+        .typing-indicator span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
         }
     </style>
 </head>
@@ -501,41 +539,83 @@
             addMessage(text, 'user');
             messageInput.value = '';
 
-            try {
-                const res = await fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: currentUser, message: text }) // No history needed now
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.detail || 'Server Check Failed');
-                if (data.response) addMessage(data.response, 'bot');
-            } catch (e) {
-                addMessage(`Server Error: ${e.message}`, 'bot');
+            let typingElement = null;
+
+            function showTyping() {
+                if (typingElement) return;
+                typingElement = document.createElement('div');
+                typingElement.className = 'typing-indicator';
+                typingElement.innerHTML = '<span></span><span></span><span></span>';
+                chatContainer.appendChild(typingElement);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
-        }
 
-        // --- Profile Logic ---
-        window.openProfile = async () => {
-            profileModal.style.display = 'flex';
-            const res = await fetch(`/profile/${currentUser}`);
-            const p = await res.json();
+            function removeTyping() {
+                if (typingElement) {
+                    typingElement.remove();
+                    typingElement = null;
+                }
+            }
 
-            const stats = document.getElementById('profile-stats');
-            stats.innerHTML = `
+            async function sendMessage() {
+                const text = messageInput.value.trim();
+                if (!text) return;
+
+                // 1. Disable Input
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+
+                addMessage(text, 'user');
+                messageInput.value = '';
+
+                // 2. Show Typing
+                showTyping();
+
+                try {
+                    const res = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: currentUser, message: text })
+                    });
+                    const data = await res.json();
+
+                    // 3. Remove typing BEFORE showing message
+                    removeTyping();
+
+                    if (!res.ok) throw new Error(data.detail || 'Server Check Failed');
+                    if (data.response) addMessage(data.response, 'bot');
+                } catch (e) {
+                    removeTyping();
+                    addMessage(`Server Error: ${e.message}`, 'bot');
+                } finally {
+                    // 4. Re-enable Input
+                    messageInput.disabled = false;
+                    sendBtn.disabled = false;
+                    messageInput.focus();
+                }
+            }
+
+            // --- Profile Logic ---
+            window.openProfile = async () => {
+                profileModal.style.display = 'flex';
+                const res = await fetch(`/profile/${currentUser}`);
+                const p = await res.json();
+
+                const stats = document.getElementById('profile-stats');
+                stats.innerHTML = `
             <div class="stat-item"><div class="stat-label">Name</div><div class="stat-value">${p.name || 'Unknown'}</div></div>
             <div class="stat-item"><div class="stat-label">Strong At</div><div class="stat-value">${p.strong_subjects.join(', ') || '-'}</div></div>
             <div class="stat-item"><div class="stat-label">Weak At</div><div class="stat-value" style="color:#ff5252">${p.weak_subjects.join(', ') || '-'}</div></div>
             <div class="stat-item"><div class="stat-label">Coaching</div><div class="stat-value">${p.coaching_name || '-'}</div></div>
             <div class="stat-item"><div class="stat-label">Stress</div><div class="stat-value">${p.stress_level}</div></div>
         `;
-        };
+            };
 
-        window.closeProfile = () => profileModal.style.display = 'none';
+            window.closeProfile = () => profileModal.style.display = 'none';
 
-        window.logout = () => {
-            location.reload(); // Simple logout
-        };
+            window.logout = () => {
+                location.reload(); // Simple logout
+            };
     </script>
 
 </body>
