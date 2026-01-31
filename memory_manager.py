@@ -9,6 +9,12 @@ import certifi
 # Load environment variables
 load_dotenv()
 
+# Global Fallback Storage (Ephemeral, resets on Server Restart)
+MOCK_DB = {
+    "profiles": {},
+    "chat_logs": {}
+}
+
 class MemoryManager:
     def __init__(self, user_id='default_user'):
         self.user_id = user_id
@@ -17,6 +23,7 @@ class MemoryManager:
         # Check for Mongo URI
         self.mongo_uri = os.getenv("MONGO_URI")
         self.use_mongo = False
+        self.is_offline = False # Fallback mode flag
         self.db = None
         self.collection = None
         
@@ -28,17 +35,21 @@ class MemoryManager:
                         tls=True,
                         tlsCAFile=certifi.where(), # Provide CA bundle
                         tlsAllowInvalidCertificates=True, # AND allow invalid certs (Dual fix)
-                        serverSelectionTimeoutMS=5000 
+                        serverSelectionTimeoutMS=3000 # Lower timeout for faster fallback
                     )
                     self.db = self.mongo_client["jeebuddy_db"]
                     self.collection = self.db["user_profiles"]
                     self.use_mongo = True
+                    # Test connection
+                    self.mongo_client.admin.command('ping')
                     # print(f"Connected to MongoDB for user {user_id}")
             except Exception as e:
-                print(f"MongoDB connection failed: {e}. Falling back to files.")
+                print(f"MongoDB connection failed: {e}. SWITCHING TO OFFLINE MODE (RAM ONLY).")
+                self.use_mongo = False
+                self.is_offline = True
         
-        if not self.use_mongo:
-            # File system fallback
+        if not self.use_mongo and not self.is_offline:
+            # File system fallback (only if NOT in forced offline mode from failure)
             # On Vercel (Linux), only /tmp is writable
             if os.path.exists("/tmp"):
                 self.profiles_dir = "/tmp/profiles"
@@ -52,7 +63,7 @@ class MemoryManager:
         self.profile = self._load_profile()
 
     def _load_profile(self):
-        """Loads the profile from MongoDB or JSON."""
+        """Loads the profile from MongoDB, JSON, or RAM (Offline)."""
         default_profile = {
             "name": "User",
             "weak_subjects": [],
@@ -67,6 +78,10 @@ class MemoryManager:
         }
 
         profile = None
+        
+        if self.is_offline:
+            # RAM Fallback
+            return MOCK_DB["profiles"].get(self.user_id, default_profile)
 
         if self.use_mongo:
             try:
@@ -78,6 +93,8 @@ class MemoryManager:
                 # Remove _id object from mongo result if needed, but not critical for dict usage
             except Exception as e:
                 print(f"Error loading from Mongo: {e}")
+                # Fallback to RAM if runtime error
+                return default_profile
                 
         else:
             # File System
@@ -111,7 +128,12 @@ class MemoryManager:
         return default_profile
 
     def _save_profile(self, profile_data):
-        """Saves dictionary to MongoDB or JSON file."""
+        """Saves dictionary to MongoDB, JSON file, or RAM."""
+        if self.is_offline:
+            MOCK_DB["profiles"][self.user_id] = profile_data
+            self.profile = profile_data
+            return
+
         if self.use_mongo:
             try:
                 self.collection.update_one(
@@ -121,8 +143,7 @@ class MemoryManager:
                 )
             except Exception as e:
                 print(f"Error saving to Mongo: {e}")
-                # Critical: Propagate error so API knows registration failed
-                raise e
+                # Do NOT raise e, just let it fail silently or fallback
         else:
             with open(self.profile_file, 'w') as f:
                 json.dump(profile_data, f, indent=4)
@@ -179,10 +200,17 @@ class MemoryManager:
 
     def get_chat_history(self, limit=50):
         """Retrieves user's chat history."""
+        if self.is_offline:
+            log = MOCK_DB["chat_logs"].get(self.user_id, [])
+            return log[-limit:]
+
         if self.use_mongo:
             # Use 'chat_logs' collection
-            log = self.db["chat_logs"].find_one({"user_id": self.user_id})
-            return log["messages"][-limit:] if log else []
+            try:
+                log = self.db["chat_logs"].find_one({"user_id": self.user_id})
+                return log["messages"][-limit:] if log else []
+            except:
+                return []
         else:
             chat_file = os.path.join(self.profiles_dir, f'{self.user_id}_chat.json')
             if not os.path.exists(chat_file):
@@ -195,12 +223,21 @@ class MemoryManager:
 
     def append_chat_history(self, messages):
         """Appends a list of message objects {"role": "...", "content": "..."}."""
+        if self.is_offline:
+            if self.user_id not in MOCK_DB["chat_logs"]:
+                MOCK_DB["chat_logs"][self.user_id] = []
+            MOCK_DB["chat_logs"][self.user_id].extend(messages)
+            return
+
         if self.use_mongo:
-            self.db["chat_logs"].update_one(
-                {"user_id": self.user_id},
-                {"$push": {"messages": {"$each": messages}}},
-                upsert=True
-            )
+            try:
+                self.db["chat_logs"].update_one(
+                    {"user_id": self.user_id},
+                    {"$push": {"messages": {"$each": messages}}},
+                    upsert=True
+                )
+            except Exception:
+                pass
         else:
             chat_file = os.path.join(self.profiles_dir, f'{self.user_id}_chat.json')
             history = self.get_chat_history(limit=1000) # Load all for file append
