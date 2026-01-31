@@ -15,7 +15,8 @@ print("Initializing Engine...")
 engine = JEEBuddyEngine()
 
 # Security
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Switched to sha256_crypt to avoid Bcrypt's 72-byte limit and Vercel issues
+pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -45,19 +46,12 @@ def get_user_manager():
     # Helper to get MM just for user management
     return MemoryManager(user_id="SYSTEM_AUTH")
 
-import hashlib
-
 def hash_password(password):
-    # Use SHA-256 to create a fixed-length digest (64 chars), which is safe for bcrypt (72 limit)
-    pwd_bytes = password.encode('utf-8')
-    digest = hashlib.sha256(pwd_bytes).hexdigest()
-    return pwd_context.hash(digest)
+    # sha256_crypt handles any length
+    return pwd_context.hash(password)
 
 def verify_password(plain_password, hashed_password):
-    # Must use same pre-hashing logic
-    pwd_bytes = plain_password.encode('utf-8')
-    digest = hashlib.sha256(pwd_bytes).hexdigest()
-    return pwd_context.verify(digest, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)
 
 # --- Endpoints ---
 
