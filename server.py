@@ -129,6 +129,24 @@ def get_profile_data(user_id: str):
     mm = MemoryManager(user_id=user_id)
     return mm.get_profile_dict()
 
+@app.get("/debug-user/{email}")
+def debug_user(email: str):
+    # Raw check for user existence
+    try:
+        email = email.lower().strip()
+        mm = MemoryManager(user_id=email)
+        raw_doc = mm.collection.find_one({"user_id": email})
+        if raw_doc:
+            # Mask PII
+            raw_doc.pop("_id", None)
+            if "password_hash" in raw_doc:
+                raw_doc["password_hash"] = "HASH_PRESENT"
+            return {"status": "found", "data": raw_doc}
+        else:
+            return {"status": "not_found", "email_searched": email}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get("/history/{user_id}")
 def get_history(user_id: str):
     mm = MemoryManager(user_id=user_id)

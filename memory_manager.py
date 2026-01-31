@@ -107,7 +107,8 @@ class MemoryManager:
                     return default_profile
             except Exception as e:
                 print(f"Error loading from Mongo: {e}")
-                return default_profile
+                # CRITICAL: Fail loudly so login knows it's a DB error, not a missing user
+                raise e
                 
         # If Mongo failed or not used, we return default.
         # We generally do NOT want file-system fallback on Vercel as it is read-only.
