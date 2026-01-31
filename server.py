@@ -64,19 +64,25 @@ def health():
 
 @app.post("/register")
 def register(user: UserRegister):
-    mm = MemoryManager(user_id=user.email) # Use email as ID for simplicity
-    profile = mm.get_profile_dict() # Need to access raw dict
-    
-    if profile.get("password_hash"):
-        raise HTTPException(status_code=400, detail="User already exists with this email")
-    
-    # Save new user
-    profile["password_hash"] = hash_password(user.password)
-    profile["email"] = user.email
-    profile["name"] = user.name # Use provided name
-    mm._save_profile(profile)
-    
-    return {"status": "created", "user_id": user.email}
+    try:
+        mm = MemoryManager(user_id=user.email) # Use email as ID for simplicity
+        profile = mm.get_profile_dict() # Need to access raw dict
+        
+        if profile.get("password_hash"):
+            raise HTTPException(status_code=400, detail="User already exists with this email")
+        
+        # Save new user
+        profile["password_hash"] = hash_password(user.password)
+        profile["email"] = user.email
+        profile["name"] = user.name # Use provided name
+        mm._save_profile(profile)
+        
+        return {"status": "created", "user_id": user.email}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"REGISTER ERROR: {e}")
+        raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}")
 
 @app.post("/login")
 def login(user: UserAuth):
