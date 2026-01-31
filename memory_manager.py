@@ -22,6 +22,7 @@ class MemoryManager:
         self.use_mongo = False
         self.db = None
         self.collection = None
+        self.init_error = None  # Capture startup error for /debug-db
         
         if self.mongo_uri:
             # Attempt connection with multiple strategies
@@ -31,12 +32,8 @@ class MemoryManager:
                 self.collection = self.db["user_profiles"]
                 self.use_mongo = True
             except Exception as e:
+                self.init_error = str(e) # Store error
                 print(f"CRITICAL: MongoDB Connection Failed after retries: {e}")
-                # User requested SERVER AUTH ONLY. Do not fall back to loose files/RAM.
-                # raising error to surface it in logs
-                # raise e 
-                # Actually, raising here crashes the constructor. 
-                # We will leave use_mongo=False, which means NO PROFILE SAVING.
                 pass
         
         if not self.use_mongo:
@@ -217,7 +214,8 @@ class MemoryManager:
         status = {
             "use_mongo": self.use_mongo,
             "has_client": self.mongo_client is not None,
-            "strategies_tried": "Secure, Insecure"
+            "strategies_tried": "Secure, Insecure",
+            "init_error": self.init_error
         }
         if self.mongo_client:
             try:
