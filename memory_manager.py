@@ -118,16 +118,18 @@ class MemoryManager:
 
     def _save_profile(self, profile_data):
         """Saves dictionary to MongoDB."""
-        if self.use_mongo:
-            try:
-                self.collection.update_one(
-                    {"user_id": self.user_id},
-                    {"$set": profile_data},
-                    upsert=True
-                )
-            except Exception as e:
-                print(f"Error saving to Mongo: {e}")
-                # We can't do much if DB fails mid-flight, just log it.
+        if not self.use_mongo:
+            raise Exception("Critical: Database Unreachable. Cannot save profile.")
+
+        try:
+            self.collection.update_one(
+                {"user_id": self.user_id},
+                {"$set": profile_data},
+                upsert=True
+            )
+        except Exception as e:
+            print(f"Error saving to Mongo: {e}")
+            raise e # Fail loudly so API knows
         
         self.profile = profile_data
 
@@ -209,6 +211,23 @@ class MemoryManager:
             print(f"Updated {key} to {value}")
         else:
             print(f"Key {key} not found in profile.")
+
+    def check_db_status(self):
+        """Returns connection info for debugging."""
+        status = {
+            "use_mongo": self.use_mongo,
+            "has_client": self.mongo_client is not None,
+            "strategies_tried": "Secure, Insecure"
+        }
+        if self.mongo_client:
+            try:
+                self.mongo_client.admin.command('ping')
+                status["ping"] = "OK"
+            except Exception as e:
+                status["ping"] = f"FAIL: {e}"
+        else:
+             status["ping"] = "No Client"
+        return status
 
     def extract_facts(self, chat_history):
         """

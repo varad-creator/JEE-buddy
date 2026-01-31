@@ -68,6 +68,14 @@ def version():
 def health():
     return {"status": "healthy"}
 
+@app.get("/debug-db")
+def debug_db():
+    try:
+        mm = MemoryManager(user_id="DEBUGGER")
+        return {"status": "checking", "db_details": mm.check_db_status()}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
 @app.post("/register")
 def register(user: UserRegister):
     try:
