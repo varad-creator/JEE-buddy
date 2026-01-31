@@ -45,20 +45,19 @@ def get_user_manager():
     # Helper to get MM just for user management
     return MemoryManager(user_id="SYSTEM_AUTH")
 
+import hashlib
+
 def hash_password(password):
-    # Ensure strict 72-byte limit (bcrypt limitation)
-    # Encode to bytes -> slice -> decode back to string (ignoring partial chars)
-    password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        password = password_bytes[:72].decode('utf-8', 'ignore')
-    return pwd_context.hash(password)
+    # Use SHA-256 to create a fixed-length digest (64 chars), which is safe for bcrypt (72 limit)
+    pwd_bytes = password.encode('utf-8')
+    digest = hashlib.sha256(pwd_bytes).hexdigest()
+    return pwd_context.hash(digest)
 
 def verify_password(plain_password, hashed_password):
-    # Truncate here too to match hash logic
-    password_bytes = plain_password.encode('utf-8')
-    if len(password_bytes) > 72:
-        plain_password = password_bytes[:72].decode('utf-8', 'ignore')
-    return pwd_context.verify(plain_password, hashed_password)
+    # Must use same pre-hashing logic
+    pwd_bytes = plain_password.encode('utf-8')
+    digest = hashlib.sha256(pwd_bytes).hexdigest()
+    return pwd_context.verify(digest, hashed_password)
 
 # --- Endpoints ---
 
