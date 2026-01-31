@@ -116,7 +116,8 @@ class MemoryManager:
     def _save_profile(self, profile_data):
         """Saves dictionary to MongoDB."""
         if not self.use_mongo:
-            raise Exception("Critical: Database Unreachable. Cannot save profile.")
+            err_msg = self.init_error if self.init_error else "Unknown Init Error"
+            raise Exception(f"DB Unreachable. Cause: {err_msg}")
 
         try:
             self.collection.update_one(
