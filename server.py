@@ -46,12 +46,19 @@ def get_user_manager():
     return MemoryManager(user_id="SYSTEM_AUTH")
 
 def hash_password(password):
-    # Truncate to 70 chars to avoid bcrypt 72-byte limit crash
-    return pwd_context.hash(password[:70])
+    # Ensure strict 72-byte limit (bcrypt limitation)
+    # Encode to bytes -> slice -> decode back to string (ignoring partial chars)
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password = password_bytes[:72].decode('utf-8', 'ignore')
+    return pwd_context.hash(password)
 
 def verify_password(plain_password, hashed_password):
-    # Truncate here too to match the hashing logic
-    return pwd_context.verify(plain_password[:70], hashed_password)
+    # Truncate here too to match hash logic
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        plain_password = password_bytes[:72].decode('utf-8', 'ignore')
+    return pwd_context.verify(plain_password, hashed_password)
 
 # --- Endpoints ---
 
