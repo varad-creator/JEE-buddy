@@ -26,7 +26,8 @@ class MemoryManager:
                     self.mongo_client = pymongo.MongoClient(
                         self.mongo_uri, 
                         tls=True,
-                        tlsAllowInvalidCertificates=True, # Critical fix for Vercel SSL Handshake Error
+                        tlsCAFile=certifi.where(), # Provide CA bundle
+                        tlsAllowInvalidCertificates=True, # AND allow invalid certs (Dual fix)
                         serverSelectionTimeoutMS=5000 
                     )
                     self.db = self.mongo_client["jeebuddy_db"]
